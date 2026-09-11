@@ -11,6 +11,7 @@ type ServiceType struct {
 	ServiceType string         `gorm:"column:service_type;not null;uniqueIndex"`
 	Metadata    Metadata       `gorm:"column:metadata;type:jsonb;serializer:json"`
 	Spec        map[string]any `gorm:"column:spec;type:jsonb;not null;serializer:json"`
+	OutputSpec  map[string]any `gorm:"column:output_spec;type:jsonb;serializer:json"`
 	Path        string         `gorm:"column:path;not null"`
 	CreateTime  time.Time      `gorm:"column:create_time;autoCreateTime"`
 	UpdateTime  time.Time      `gorm:"column:update_time;autoUpdateTime"`

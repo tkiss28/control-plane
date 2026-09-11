@@ -32,7 +32,9 @@ func defaultServiceTypes() []model.ServiceType {
 				"app":      three_tier_app_demo.AppTier{Image: "", Network: emptyNetwork},
 				"web":      three_tier_app_demo.WebTier{Image: "", Network: emptyNetwork},
 			},
-			Path: "service-types/three-tier-app-demo",
+			// three-tier-app-demo is a composite demo type; no cross-provider output fields.
+			OutputSpec: nil,
+			Path:       "service-types/three-tier-app-demo",
 		},
 		{
 			ID:          "vm",
@@ -46,7 +48,8 @@ func defaultServiceTypes() []model.ServiceType {
 				"access":   vm.Access{},
 				"ip":       []vm.VmEndpoint{},
 			},
-			Path: "service-types/vm",
+			OutputSpec: outputSpecVM(),
+			Path:       "service-types/vm",
 		},
 		{
 			ID:          "container",
@@ -59,7 +62,8 @@ func defaultServiceTypes() []model.ServiceType {
 				"network":   container.Network{},
 				"endpoints": []container.ContainerEndpoint{},
 			},
-			Path: "service-types/container",
+			OutputSpec: outputSpecContainer(),
+			Path:       "service-types/container",
 		},
 		{
 			ID:          "database",
@@ -71,7 +75,8 @@ func defaultServiceTypes() []model.ServiceType {
 				"resources":         database.DatabaseResources{},
 				"connection_string": "",
 			},
-			Path: "service-types/database",
+			OutputSpec: outputSpecDatabase(),
+			Path:       "service-types/database",
 		},
 		{
 			ID:          "cluster",
@@ -83,7 +88,8 @@ func defaultServiceTypes() []model.ServiceType {
 				"console_url":  "",
 				"kubeconfig":   "",
 			},
-			Path: "service-types/cluster",
+			OutputSpec: outputSpecCluster(),
+			Path:       "service-types/cluster",
 		},
 		{
 			ID:          "storage",
@@ -93,7 +99,8 @@ func defaultServiceTypes() []model.ServiceType {
 				"capacity":    "",
 				"volume_name": "",
 			},
-			Path: "service-types/storage",
+			OutputSpec: outputSpecStorage(),
+			Path:       "service-types/storage",
 		},
 		{
 			ID:          "network",
@@ -104,7 +111,119 @@ func defaultServiceTypes() []model.ServiceType {
 				"routing_level": "",
 				"endpoints":     []network.NetworkEndpoint{},
 			},
-			Path: "service-types/network",
+			OutputSpec: outputSpecNetwork(),
+			Path:       "service-types/network",
+		},
+	}
+}
+
+// outputSpecStorage returns the curated output definition for the storage service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/storage/spec.yaml.
+func outputSpecStorage() map[string]any {
+	return map[string]any{
+		"volume_name": map[string]any{
+			"type":        "string",
+			"description": "Bound volume identifier assigned by the provider (e.g. PersistentVolume name)",
+		},
+	}
+}
+
+// outputSpecDatabase returns the curated output definition for the database service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/database/spec.yaml.
+func outputSpecDatabase() map[string]any {
+	return map[string]any{
+		"connection_string": map[string]any{
+			"type":        "string",
+			"description": "Database connection URI (format: scheme://user:pass@host:port/db)",
+		},
+	}
+}
+
+// outputSpecCluster returns the curated output definition for the cluster service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/cluster/spec.yaml.
+func outputSpecCluster() map[string]any {
+	return map[string]any{
+		"api_endpoint": map[string]any{
+			"type":        "string",
+			"description": "Kubernetes API server endpoint for the provisioned cluster",
+		},
+		"console_url": map[string]any{
+			"type":        "string",
+			"description": "Web console URL for the provisioned cluster",
+		},
+		"kubeconfig": map[string]any{
+			"type":        "string",
+			"description": "Base64-encoded kubeconfig granting admin access to the provisioned cluster",
+		},
+	}
+}
+
+// outputSpecContainer returns the curated output definition for the container service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/container/spec.yaml
+// and metadata.namespace from api/catalog/v1alpha1/servicetypes/common.yaml (ServiceMetadata).
+// ContainerEndpoint includes an optional protocol field (TCP/UDP).
+func outputSpecContainer() map[string]any {
+	return map[string]any{
+		"endpoints": map[string]any{
+			"type":        "array",
+			"description": "Resolved connection endpoints exposed by the container",
+			"items": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"address":  map[string]any{"type": "string"},
+					"port":     map[string]any{"type": "integer"},
+					"scope":    map[string]any{"type": "string"},
+					"protocol": map[string]any{"type": "string"},
+				},
+			},
+		},
+		// namespace is sourced from metadata.namespace (ServiceMetadata.namespace,
+		// readOnly in common.yaml); surfaced as a top-level output field.
+		"namespace": map[string]any{
+			"type":        "string",
+			"description": "Provider administrative namespace where the container was provisioned",
+		},
+	}
+}
+
+// outputSpecVM returns the curated output definition for the vm service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/vm/spec.yaml.
+// VmEndpoint has address, port, scope (no protocol field unlike ContainerEndpoint).
+func outputSpecVM() map[string]any {
+	return map[string]any{
+		"ip": map[string]any{
+			"type":        "array",
+			"description": "Resolved connection endpoints for the virtual machine",
+			"items": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"address": map[string]any{"type": "string"},
+					"port":    map[string]any{"type": "integer"},
+					"scope":   map[string]any{"type": "string"},
+				},
+			},
+		},
+	}
+}
+
+// outputSpecNetwork returns the curated output definition for the network service type.
+// Derived from readOnly fields in api/catalog/v1alpha1/servicetypes/network/spec.yaml.
+// NetworkEndpoint includes an optional name and protocol field.
+func outputSpecNetwork() map[string]any {
+	return map[string]any{
+		"endpoints": map[string]any{
+			"type":        "array",
+			"description": "Resolved connection endpoints for the provisioned network service",
+			"items": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"name":     map[string]any{"type": "string"},
+					"address":  map[string]any{"type": "string"},
+					"port":     map[string]any{"type": "integer"},
+					"scope":    map[string]any{"type": "string"},
+					"protocol": map[string]any{"type": "string"},
+				},
+			},
 		},
 	}
 }
